@@ -20,6 +20,9 @@ cp "$ROOT_DIR/SECURITY.md" "$APP_RESOURCES_DIR/"
 cp "$ROOT_DIR/PRIVACY.md" "$APP_RESOURCES_DIR/"
 cp "$ROOT_DIR/Run Kids Schedule Studio.command" "$APP_RESOURCES_DIR/"
 cp "$ROOT_DIR/assets/"*.png "$APP_RESOURCES_DIR/assets/"
+if [[ -f "$ROOT_DIR/assets/AppIcon.icns" ]]; then
+  cp "$ROOT_DIR/assets/AppIcon.icns" "$RESOURCES_DIR/"
+fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -32,6 +35,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<'PLIST'
   <string>kids-schedule-studio</string>
   <key>CFBundleIdentifier</key>
   <string>local.kids-schedule-studio.app</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>CFBundleName</key>

@@ -5,6 +5,7 @@ dist/
 *.zip
 qa-*.png
 kids-schedule-studio-backup-*.json
+assets/AppIcon.iconset/
 .env
 .env.*
 .vscode/

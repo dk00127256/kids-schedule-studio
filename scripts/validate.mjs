@@ -14,6 +14,8 @@ const requiredFiles = [
   "assets/cartoon_robot.png",
   "assets/cartoon_rocket.png",
   "assets/reward_badge.png",
+  "assets/app_icon.png",
+  "assets/AppIcon.icns",
 ];
 
 function read(relativePath) {
@@ -53,6 +55,10 @@ assert(app.includes("function saveBulkSchedule"), "app.js should support bulk sc
 assert(app.includes("function conflictPairs"), "app.js should detect overlapping schedule conflicts");
 assert(app.includes("function renderInsights"), "app.js should render the parent brief");
 assert(app.includes("function exportIcs"), "app.js should support local calendar export");
+
+const packageScript = read("scripts/package-macos-app.zsh");
+assert(packageScript.includes("CFBundleIconFile"), "macOS package should declare an app icon");
+assert(packageScript.includes("AppIcon.icns"), "macOS package should copy AppIcon.icns");
 
 const syntax = spawnSync(process.execPath, ["--check", join(root, "app.js")], { encoding: "utf8" });
 assert(syntax.status === 0, syntax.stderr || "app.js syntax check failed");

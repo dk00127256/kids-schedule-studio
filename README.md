@@ -86,6 +86,12 @@ dist/Kids Schedule Studio.zip
 
 The generated app is unsigned. On another Mac, the first launch may require right-clicking the app and choosing Open.
 
+The package includes the custom Kids Schedule Studio app icon from `assets/AppIcon.icns`. To regenerate the icon from the project artwork:
+
+```zsh
+python3 scripts/build-app-icon.py
+```
+
 ## Print PDFs
 
 1. Choose the kid and view: Day, Week, or Month.
