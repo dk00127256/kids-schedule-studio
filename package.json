@@ -1,0 +1,22 @@
+{
+  "name": "kids-schedule-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local-first May-December 2026 timetable planner for two elementary-age kids.",
+  "type": "module",
+  "scripts": {
+    "start": "./scripts/start-local.zsh",
+    "check": "node scripts/validate.mjs",
+    "package:mac": "./scripts/package-macos-app.zsh"
+  },
+  "keywords": [
+    "calendar",
+    "schedule",
+    "kids",
+    "local-first",
+    "printable"
+  ],
+  "license": "UNLICENSED",
+  "dependencies": {},
+  "devDependencies": {}
+}

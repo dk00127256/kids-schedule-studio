@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Kids Schedule Studio</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <img src="./assets/cartoon_robot.png" alt="" class="brand-art" />
+          <div>
+            <h1>Kids Schedule Studio</h1>
+            <p>May-December 2026 | Central Time</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="importBtn" title="Import backup" aria-label="Import backup">
+            <span aria-hidden="true">[+]</span>
+          </button>
+          <button class="icon-button" id="exportBtn" title="Export backup" aria-label="Export backup">
+            <span aria-hidden="true">[^]</span>
+          </button>
+          <button class="primary-button" id="printWeekBtn">Print Week PDF</button>
+        </div>
+      </header>
+
+      <section class="family-strip">
+        <label>
+          <span>Family</span>
+          <input id="familyNameInput" type="text" placeholder="Family name" autocomplete="off" maxlength="80" />
+        </label>
+        <label>
+          <span>Kid 1</span>
+          <input id="kid1NameInput" type="text" placeholder="Kid 1 name" autocomplete="off" maxlength="60" />
+        </label>
+        <label>
+          <span>Kid 2</span>
+          <input id="kid2NameInput" type="text" placeholder="Kid 2 name" autocomplete="off" maxlength="60" />
+        </label>
+        <div class="save-pill" id="saveStatus">Saved locally</div>
+      </section>
+
+      <main class="workspace">
+        <aside class="side-panel">
+          <section class="panel-section">
+            <div class="section-title">
+              <span>View</span>
+            </div>
+            <div class="segmented" role="tablist" aria-label="View selector">
+              <button class="segment active" data-view="week">Week</button>
+              <button class="segment" data-view="month">Month</button>
+              <button class="segment" data-view="activities">Activities</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <span>Schedule</span>
+            </div>
+            <label class="stacked-label">
+              <span>Month</span>
+              <select id="monthSelect"></select>
+            </label>
+            <label class="stacked-label">
+              <span>Week</span>
+              <select id="weekSelect"></select>
+            </label>
+            <label class="stacked-label">
+              <span>Kid</span>
+              <select id="kidSelect"></select>
+            </label>
+          </section>
+
+          <section class="panel-section">
+            <div class="section-title">
+              <span>Copy Tools</span>
+            </div>
+            <label class="stacked-label">
+              <span>Day</span>
+              <select id="copyDaySelect"></select>
+            </label>
+            <label class="check-row">
+              <input id="replaceCopyToggle" type="checkbox" checked />
+              <span>Replace target first</span>
+            </label>
+            <div class="button-grid">
+              <button id="copyDayNextBtn">Copy Day Next Week</button>
+              <button id="copyWeekNextBtn">Copy Week Next Week</button>
+            </div>
+            <label class="stacked-label">
+              <span>Target date</span>
+              <input id="targetDateInput" type="date" min="2026-05-01" max="2026-12-31" />
+            </label>
+            <button id="copyDayTargetBtn" class="wide-button">Copy Day To Date</button>
+          </section>
+
+          <section class="panel-section activity-mini">
+            <div class="section-title">
+              <span>Reusable Activities</span>
+              <button id="newActivityBtn" class="small-button">New</button>
+            </div>
+            <div id="activityList" class="activity-list"></div>
+          </section>
+        </aside>
+
+        <section class="main-stage">
+          <div class="stage-toolbar">
+            <div>
+              <h2 id="stageTitle">Week Planner</h2>
+              <p id="stageSubtitle">Click any time slot to add or edit activities.</p>
+            </div>
+            <div class="stage-actions">
+              <button id="addEntryBtn">Add Activity</button>
+              <button id="finalizeWeekBtn">Finalize Week</button>
+              <button id="printDayBtn">Print Day PDF</button>
+              <button id="printMonthBtn">Print Month PDF</button>
+            </div>
+          </div>
+          <div id="weekView" class="view-panel"></div>
+          <div id="monthView" class="view-panel hidden"></div>
+          <div id="activitiesView" class="view-panel hidden"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="entryDialog" class="app-dialog">
+      <form method="dialog" id="entryForm">
+        <div class="dialog-head">
+          <h3 id="entryDialogTitle">Activity</h3>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Kid</span>
+            <select id="entryKid"></select>
+          </label>
+          <label>
+            <span>Date</span>
+            <input id="entryDate" type="date" min="2026-05-01" max="2026-12-31" required />
+          </label>
+          <label>
+            <span>Start</span>
+            <select id="entryStart"></select>
+          </label>
+          <label>
+            <span>End</span>
+            <select id="entryEnd"></select>
+          </label>
+          <label class="span-2">
+            <span>Use saved activity</span>
+            <select id="entryTemplate"></select>
+          </label>
+          <label class="span-2">
+            <span>Title</span>
+            <input id="entryTitle" type="text" placeholder="Math class, soccer, reading..." required maxlength="80" />
+          </label>
+          <label>
+            <span>Type</span>
+            <select id="entryType"></select>
+          </label>
+          <label>
+            <span>Color</span>
+            <input id="entryColor" type="color" />
+          </label>
+          <label class="span-2">
+            <span>Location</span>
+            <input id="entryLocation" type="text" placeholder="School, library, gym..." maxlength="120" />
+          </label>
+          <label class="span-2">
+            <span>Details</span>
+            <textarea id="entryNotes" rows="4" maxlength="800" placeholder="Teacher, what to bring, homework, parent notes..."></textarea>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="deleteEntryBtn" class="danger-button">Delete</button>
+          <div class="action-spacer"></div>
+          <button value="cancel">Cancel</button>
+          <button id="saveEntryBtn" value="default" class="primary-button">Save Activity</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="activityDialog" class="app-dialog small-dialog">
+      <form method="dialog" id="activityForm">
+        <div class="dialog-head">
+          <h3>Reusable Activity</h3>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label class="span-2">
+            <span>Name</span>
+            <input id="activityTitle" type="text" required maxlength="80" />
+          </label>
+          <label>
+            <span>Type</span>
+            <select id="activityType"></select>
+          </label>
+          <label>
+            <span>Color</span>
+            <input id="activityColor" type="color" />
+          </label>
+          <label class="span-2">
+            <span>Default details</span>
+            <textarea id="activityNotes" rows="3" maxlength="800"></textarea>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="deleteActivityBtn" class="danger-button">Delete</button>
+          <div class="action-spacer"></div>
+          <button value="cancel">Cancel</button>
+          <button id="saveActivityBtn" value="default" class="primary-button">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <input id="importFileInput" class="hidden-file" type="file" accept="application/json" />
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="printRoot" class="print-root"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>

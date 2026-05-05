@@ -1,0 +1,14 @@
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+*.zip
+qa-*.png
+kids-schedule-studio-backup-*.json
+.env
+.env.*
+.vscode/
+.idea/
+coverage/
+npm-debug.log*
+yarn-error.log*
