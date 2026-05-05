@@ -46,6 +46,13 @@ assert(app.includes("function sanitizeColor"), "app.js should sanitize colors");
 assert(app.includes("function normalizeState"), "app.js should normalize imported state");
 assert(app.includes("function escapeHtml"), "app.js should escape rendered text");
 assert(app.includes("MAX_ENTRIES"), "app.js should cap imported entries");
+assert(app.includes("function copyEntryFromForm"), "app.js should support copying one scheduled activity");
+assert(app.includes("function entryOverlapsHour"), "app.js should render multi-hour activity blocks");
+assert(app.includes("function hourBlockDetails"), "app.js should label each blocked hour inside a long activity");
+assert(app.includes("function saveBulkSchedule"), "app.js should support bulk schedule creation");
+assert(app.includes("function conflictPairs"), "app.js should detect overlapping schedule conflicts");
+assert(app.includes("function renderInsights"), "app.js should render the parent brief");
+assert(app.includes("function exportIcs"), "app.js should support local calendar export");
 
 const syntax = spawnSync(process.execPath, ["--check", join(root, "app.js")], { encoding: "utf8" });
 assert(syntax.status === 0, syntax.stderr || "app.js syntax check failed");

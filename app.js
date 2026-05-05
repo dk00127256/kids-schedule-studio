@@ -108,6 +108,7 @@
       "entryLocation",
       "entryNotes",
       "deleteEntryBtn",
+      "copyEntryBtn",
       "activityDialog",
       "activityForm",
       "activityTitle",
@@ -116,6 +117,21 @@
       "activityNotes",
       "deleteActivityBtn",
       "importFileInput",
+      "scheduleInsights",
+      "bulkDialog",
+      "bulkForm",
+      "bulkKid",
+      "bulkTemplate",
+      "bulkStartDate",
+      "bulkEndDate",
+      "bulkStart",
+      "bulkEnd",
+      "bulkTitle",
+      "bulkType",
+      "bulkColor",
+      "bulkLocation",
+      "bulkNotes",
+      "bulkReplaceToggle",
       "toast",
       "printRoot",
       "saveStatus",
@@ -172,8 +188,10 @@
     document.getElementById("printDayBtn").addEventListener("click", () => printSchedule("day"));
     document.getElementById("printMonthBtn").addEventListener("click", () => printSchedule("month"));
     document.getElementById("exportBtn").addEventListener("click", exportBackup);
+    document.getElementById("exportIcsBtn").addEventListener("click", exportIcs);
     document.getElementById("importBtn").addEventListener("click", () => els.importFileInput.click());
     els.importFileInput.addEventListener("change", importBackup);
+    document.getElementById("bulkScheduleBtn").addEventListener("click", openBulkDialog);
 
     els.weekView.addEventListener("click", handleWeekClick);
     els.monthView.addEventListener("click", handleMonthClick);
@@ -185,15 +203,25 @@
       const type = TYPES.find((item) => item.name === els.entryType.value);
       if (type) els.entryColor.value = type.color;
     });
+    els.bulkTemplate.addEventListener("change", applyBulkTemplate);
+    els.bulkType.addEventListener("change", () => {
+      const type = TYPES.find((item) => item.name === els.bulkType.value);
+      if (type) els.bulkColor.value = type.color;
+    });
     document.getElementById("saveEntryBtn").addEventListener("click", (event) => {
       event.preventDefault();
       saveEntryFromForm();
     });
     els.deleteEntryBtn.addEventListener("click", deleteEditingEntry);
+    els.copyEntryBtn.addEventListener("click", copyEntryFromForm);
 
     document.getElementById("saveActivityBtn").addEventListener("click", (event) => {
       event.preventDefault();
       saveActivityFromForm();
+    });
+    document.getElementById("saveBulkBtn").addEventListener("click", (event) => {
+      event.preventDefault();
+      saveBulkSchedule();
     });
     els.deleteActivityBtn.addEventListener("click", deleteEditingActivity);
   }
@@ -202,7 +230,9 @@
     els.monthSelect.innerHTML = MONTHS.map((month) => `<option value="${month}">${MONTH_NAMES[month]} 2026</option>`).join("");
     els.entryStart.innerHTML = START_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
     els.entryEnd.innerHTML = END_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
-    [els.entryType, els.activityType].forEach((select) => {
+    els.bulkStart.innerHTML = START_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
+    els.bulkEnd.innerHTML = END_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
+    [els.entryType, els.activityType, els.bulkType].forEach((select) => {
       select.innerHTML = TYPES.map((type) => `<option value="${escapeHtml(type.name)}">${escapeHtml(type.name)}</option>`).join("");
     });
   }
@@ -218,6 +248,7 @@
   function render() {
     syncSelectors();
     renderActivityList();
+    renderInsights();
     renderStage();
     document.querySelectorAll("[data-view]").forEach((button) => {
       button.classList.toggle("active", button.dataset.view === state.selectedView);
@@ -244,11 +275,17 @@
     ].join("");
     els.kidSelect.value = state.selectedKid;
     els.entryKid.innerHTML = state.kids.map((kid) => `<option value="${kid.id}">${escapeHtml(kid.name)}</option>`).join("");
+    els.bulkKid.innerHTML = [
+      ...state.kids.map((kid) => `<option value="${kid.id}">${escapeHtml(kid.name)}</option>`),
+      `<option value="both">Both kids</option>`,
+    ].join("");
+    els.bulkKid.value = state.selectedKid;
     els.copyDaySelect.innerHTML = currentWeek()
       .map((day, index) => `<option value="${index}">${SHORT_DAYS[index]} ${day.getMonth() + 1}/${day.getDate()}</option>`)
       .join("");
     if (!els.copyDaySelect.value) els.copyDaySelect.value = "0";
     els.entryTemplate.innerHTML = `<option value="">Custom entry</option>` + state.activities.map((activity) => `<option value="${activity.id}">${escapeHtml(activity.title)}</option>`).join("");
+    els.bulkTemplate.innerHTML = `<option value="">Custom schedule</option>` + state.activities.map((activity) => `<option value="${activity.id}">${escapeHtml(activity.title)}</option>`).join("");
   }
 
   function renderStage() {
@@ -288,10 +325,11 @@
           const finalized = isFinalized(dateKey) ? " finalized" : "";
           const reward = dayIndex === 6 ? " reward" : "";
           const entries = entriesForSlot(dateKey, hour);
+          const conflict = entries.some((entry) => entryHasConflict(entry)) ? " conflict" : "";
           const chips = entries.length
-            ? entries.map(entryChip).join("")
+            ? entries.map((entry) => entryChip(entry, hour)).join("")
             : `<span class="empty-hint">${dayIndex === 6 ? "Reward" : ""}</span>`;
-          return `<div class="week-cell slot-cell${finalized}${reward}" data-date="${dateKey}" data-hour="${hour}">${chips}</div>`;
+          return `<div class="week-cell slot-cell${finalized}${reward}${conflict}" data-date="${dateKey}" data-hour="${hour}">${chips}</div>`;
         })
         .join("");
       return timeCell + dayCells;
@@ -346,6 +384,31 @@
       .join("");
   }
 
+  function renderInsights() {
+    const weekDates = currentWeek().map(fmtDate);
+    const scope = kidsInScope();
+    const weekEntries = state.entries.filter((entry) => scope.includes(entry.kidId) && weekDates.includes(entry.date));
+    const conflictCount = conflictPairs(scope, weekDates).length;
+    const longBlockCount = weekEntries.filter((entry) => entry.end - entry.start > 1).length;
+    const finalizedCount = weekDates.filter((dateKey) => scope.every((kidId) => state.finalized[`${kidId}:${dateKey}`])).length;
+    const nextEntry = weekEntries.slice().sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)[0];
+    const nextText = nextEntry ? `${SHORT_DAYS[(toDate(nextEntry.date).getDay() + 6) % 7]} ${formatHour(nextEntry.start)} ${nextEntry.title}` : "No activities this week";
+    els.scheduleInsights.innerHTML = [
+      insightItem("Week items", String(weekEntries.length)),
+      insightItem("Conflicts", String(conflictCount), conflictCount ? "danger" : "good"),
+      insightItem("Long blocks", String(longBlockCount)),
+      insightItem("Final days", `${finalizedCount}/7`, finalizedCount === 7 ? "good" : ""),
+      insightItem("Next", nextText),
+    ].join("");
+  }
+
+  function insightItem(label, value, tone = "") {
+    return `<div class="insight-item${tone ? " " + tone : ""}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>`;
+  }
+
   function renderActivitiesBoard() {
     els.stageTitle.textContent = "Reusable Activities";
     els.stageSubtitle.textContent = "Build activity blocks once, then use them when scheduling.";
@@ -363,11 +426,13 @@
     </div>`;
   }
 
-  function entryChip(entry) {
+  function entryChip(entry, hour = entry.start) {
     const kid = kidById(entry.kidId);
     const kidPrefix = state.selectedKid === "both" ? `${kid.name}: ` : "";
-    const details = `${formatHour(entry.start)}-${formatHour(entry.end)}${entry.location ? " | " + entry.location : ""}`;
-    return `<button class="entry-chip" style="background:${entry.color}" data-entry-id="${entry.id}">
+    const isContinuation = hour > entry.start;
+    const details = hourBlockDetails(entry, hour);
+    const conflict = entryHasConflict(entry) ? " conflict" : "";
+    return `<button class="entry-chip${isContinuation ? " continued" : ""}${conflict}" style="background:${entry.color}" data-entry-id="${entry.id}">
       ${escapeHtml(kidPrefix + entry.title)}
       <small>${escapeHtml(details)}</small>
     </button>`;
@@ -413,6 +478,7 @@
     editingEntryId = entry.id || null;
     els.entryDialogTitle.textContent = editingEntryId ? "Edit Activity" : "Add Activity";
     els.deleteEntryBtn.style.display = editingEntryId ? "inline-flex" : "none";
+    els.copyEntryBtn.style.display = editingEntryId ? "inline-flex" : "none";
     els.entryKid.value = entry.kidId || (state.selectedKid === "both" ? state.kids[0].id : state.selectedKid);
     els.entryDate.value = entry.date || state.selectedDate || state.selectedWeekStart;
     els.entryStart.value = String(entry.start || 8);
@@ -435,16 +501,139 @@
     els.entryNotes.value = activity.notes || "";
   }
 
+  function openBulkDialog() {
+    const week = currentWeek();
+    const startDate = isEntryDate(state.selectedDate) ? state.selectedDate : fmtDate(week.find((day) => isEntryDate(fmtDate(day))) || toDate(MIN_ENTRY_DATE));
+    const defaultEnd = fmtDate(addDays(startDate, 4));
+    els.bulkKid.value = state.selectedKid;
+    els.bulkTemplate.value = "";
+    els.bulkStartDate.value = startDate;
+    els.bulkEndDate.value = isEntryDate(defaultEnd) ? defaultEnd : startDate;
+    els.bulkStart.value = "8";
+    els.bulkEnd.value = "16";
+    els.bulkTitle.value = "School";
+    els.bulkType.value = "Learning";
+    els.bulkColor.value = colorForType("Learning");
+    els.bulkLocation.value = "";
+    els.bulkNotes.value = "";
+    els.bulkReplaceToggle.checked = true;
+    setBulkWeekdays([1, 2, 3, 4, 5]);
+    els.bulkDialog.showModal();
+  }
+
+  function applyBulkTemplate() {
+    const activity = state.activities.find((item) => item.id === els.bulkTemplate.value);
+    if (!activity) return;
+    els.bulkTitle.value = activity.title;
+    els.bulkType.value = activity.type;
+    els.bulkColor.value = activity.color;
+    els.bulkNotes.value = activity.notes || "";
+  }
+
+  function saveBulkSchedule() {
+    if (!els.bulkForm.reportValidity()) return;
+    const startDate = sanitizeDate(els.bulkStartDate.value, MIN_ENTRY_DATE, true);
+    const endDate = sanitizeDate(els.bulkEndDate.value, startDate, true);
+    if (!startDate || !endDate || toDate(endDate) < toDate(startDate)) {
+      showToast("Choose a valid date range");
+      return;
+    }
+    const weekdays = selectedBulkWeekdays();
+    if (!weekdays.length) {
+      showToast("Choose at least one weekday");
+      return;
+    }
+    const start = sanitizeHour(els.bulkStart.value, 8, 23);
+    let end = sanitizeHour(els.bulkEnd.value, Math.min(24, start + 1));
+    if (end <= start) end = Math.min(24, start + 1);
+    const type = sanitizeType(els.bulkType.value);
+    const kidIds = els.bulkKid.value === "both" ? state.kids.map((kid) => kid.id) : [sanitizeKidId(els.bulkKid.value)];
+    const title = sanitizeText(els.bulkTitle.value, 80) || "Activity";
+    const dates = datesInRange(startDate, endDate).filter((dateKey) => weekdays.includes(toDate(dateKey).getDay()));
+    const newEntries = dates.flatMap((date) =>
+      kidIds.map((kidId) => ({
+        id: id(),
+        kidId,
+        date,
+        start,
+        end,
+        title,
+        type,
+        color: sanitizeColor(els.bulkColor.value, colorForType(type)),
+        location: sanitizeText(els.bulkLocation.value, 120),
+        notes: sanitizeMultilineText(els.bulkNotes.value, 800),
+      })),
+    );
+    if (!newEntries.length) {
+      showToast("No matching dates in range");
+      return;
+    }
+    const availableSlots = Math.max(0, MAX_ENTRIES - state.entries.length);
+    const entriesToAdd = newEntries.slice(0, availableSlots);
+    if (!entriesToAdd.length) {
+      showToast("Schedule is full. Export backup before adding more.");
+      return;
+    }
+    if (els.bulkReplaceToggle.checked) {
+      state.entries = state.entries.filter((entry) => !entriesToAdd.some((candidate) => sameScheduleTarget(entry, candidate) && rangesOverlap(entry, candidate)));
+    }
+    state.entries.push(...entriesToAdd);
+    selectEntryDate(entriesToAdd[0].date);
+    saveState(`${entriesToAdd.length} bulk item${entriesToAdd.length === 1 ? "" : "s"} added`);
+    els.bulkDialog.close();
+    render();
+  }
+
+  function setBulkWeekdays(days) {
+    els.bulkForm.querySelectorAll("[name='bulkWeekday']").forEach((checkbox) => {
+      checkbox.checked = days.includes(Number(checkbox.value));
+    });
+  }
+
+  function selectedBulkWeekdays() {
+    return Array.from(els.bulkForm.querySelectorAll("[name='bulkWeekday']:checked")).map((checkbox) => Number(checkbox.value));
+  }
+
   function saveEntryFromForm() {
     if (!els.entryForm.reportValidity()) return;
+    const entry = entryFromForm(editingEntryId || id());
+    if (!entry) return;
+    if (editingEntryId) {
+      state.entries = state.entries.map((item) => (item.id === editingEntryId ? entry : item));
+    } else {
+      state.entries.push(entry);
+    }
+    selectEntryDate(entry.date);
+    saveState(entry.end - entry.start > 1 ? "Bulk time block saved" : "Activity saved");
+    els.entryDialog.close();
+    render();
+  }
+
+  function copyEntryFromForm() {
+    if (!editingEntryId || !els.entryForm.reportValidity()) return;
+    const entry = entryFromForm(id());
+    if (!entry) return;
+    state.entries.push(entry);
+    selectEntryDate(entry.date);
+    saveState("Activity copied");
+    els.entryDialog.close();
+    render();
+  }
+
+  function entryFromForm(entryId) {
     const start = sanitizeHour(els.entryStart.value, 8, 23);
     let end = sanitizeHour(els.entryEnd.value, Math.min(24, start + 1));
     if (end <= start) end = Math.min(24, start + 1);
     const type = sanitizeType(els.entryType.value);
-    const entry = {
-      id: editingEntryId || id(),
+    const date = sanitizeDate(els.entryDate.value, state.selectedDate, true);
+    if (!date) {
+      showToast("Choose a May-Dec 2026 date");
+      return null;
+    }
+    return {
+      id: entryId,
       kidId: sanitizeKidId(els.entryKid.value),
-      date: sanitizeDate(els.entryDate.value, state.selectedDate, true),
+      date,
       start,
       end,
       title: sanitizeText(els.entryTitle.value, 80) || "Activity",
@@ -453,17 +642,12 @@
       location: sanitizeText(els.entryLocation.value, 120),
       notes: sanitizeMultilineText(els.entryNotes.value, 800),
     };
-    if (editingEntryId) {
-      state.entries = state.entries.map((item) => (item.id === editingEntryId ? entry : item));
-    } else {
-      state.entries.push(entry);
-    }
-    state.selectedDate = entry.date;
-    state.selectedMonth = Number(entry.date.slice(5, 7));
-    state.selectedWeekStart = fmtDate(startOfWeek(toDate(entry.date)));
-    saveState("Activity saved");
-    els.entryDialog.close();
-    render();
+  }
+
+  function selectEntryDate(dateKey) {
+    state.selectedDate = dateKey;
+    state.selectedMonth = Number(dateKey.slice(5, 7));
+    state.selectedWeekStart = fmtDate(startOfWeek(toDate(dateKey)));
   }
 
   function deleteEditingEntry() {
@@ -627,8 +811,8 @@
     const body = START_HOURS.map((hour) => {
       const cells = week
         .map((day) => {
-          const entries = state.entries.filter((entry) => entry.kidId === kid.id && entry.date === fmtDate(day) && entry.start === hour);
-          return `<td>${entries.map(printEntry).join("")}</td>`;
+          const entries = entriesForPrintSlot(kid.id, fmtDate(day), hour);
+          return `<td>${entries.map((entry) => printEntry(entry, hour)).join("")}</td>`;
         })
         .join("");
       return `<tr><td class="time-col">${formatHour(hour)}</td>${cells}</tr>`;
@@ -641,8 +825,8 @@
     const title = `${kid.name} | ${day.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`;
     const subtitle = `${state.familyName || "Family"} | Daily plan`;
     const body = START_HOURS.map((hour) => {
-      const entries = state.entries.filter((entry) => entry.kidId === kid.id && entry.date === fmtDate(day) && entry.start === hour);
-      return `<tr><td class="time-col">${formatHour(hour)}</td><td>${entries.map(printEntry).join("")}</td></tr>`;
+      const entries = entriesForPrintSlot(kid.id, fmtDate(day), hour);
+      return `<tr><td class="time-col">${formatHour(hour)}</td><td>${entries.map((entry) => printEntry(entry, hour)).join("")}</td></tr>`;
     }).join("");
     return `<section class="print-page">${printHeader(title, subtitle, kid)}<table class="print-table"><tr><th class="time-col">Time</th><th>Activity</th></tr>${body}</table></section>`;
   }
@@ -667,8 +851,9 @@
     return `<section class="print-page">${printHeader(title, subtitle, kid)}<table class="print-table print-month">${header}${rows}</table></section>`;
   }
 
-  function printEntry(entry) {
-    return `<div class="print-entry" style="background:${entry.color}">${escapeHtml(entry.title)}<br /><small>${formatHour(entry.start)}-${formatHour(entry.end)}${entry.location ? " | " + escapeHtml(entry.location) : ""}</small></div>`;
+  function printEntry(entry, hour = entry.start) {
+    const details = hourBlockDetails(entry, hour);
+    return `<div class="print-entry${hour > entry.start ? " continued" : ""}" style="background:${entry.color}">${escapeHtml(entry.title)}<br /><small>${escapeHtml(details)}</small></div>`;
   }
 
   function exportBackup() {
@@ -681,6 +866,53 @@
     link.click();
     URL.revokeObjectURL(url);
     showToast("Backup exported");
+  }
+
+  function exportIcs() {
+    const scope = kidsInScope();
+    const entries = state.entries.filter((entry) => scope.includes(entry.kidId)).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+    if (!entries.length) {
+      showToast("No calendar items to export");
+      return;
+    }
+    const lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Kids Schedule Studio//Family Planner//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "X-WR-CALNAME:Kids Schedule Studio",
+      "X-WR-TIMEZONE:America/Chicago",
+    ];
+    entries.forEach((entry) => {
+      const kid = kidById(entry.kidId);
+      const description = [entry.type, entry.notes].filter(Boolean).join("\\n");
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${entry.id}@kids-schedule-studio.local`,
+        `DTSTAMP:${utcStamp(new Date())}`,
+        `DTSTART;TZID=America/Chicago:${icsDateTime(entry.date, entry.start)}`,
+        `DTEND;TZID=America/Chicago:${icsDateTime(entry.date, entry.end)}`,
+        `SUMMARY:${escapeIcsText(`${kid.name}: ${entry.title}`)}`,
+        `CATEGORIES:${escapeIcsText(entry.type)}`,
+      );
+      if (entry.location) lines.push(`LOCATION:${escapeIcsText(entry.location)}`);
+      if (description) lines.push(`DESCRIPTION:${escapeIcsText(description)}`);
+      lines.push("END:VEVENT");
+    });
+    lines.push("END:VCALENDAR");
+    downloadText(lines.join("\r\n"), `kids-schedule-studio-${state.selectedKid}-${new Date().toISOString().slice(0, 10)}.ics`, "text/calendar");
+    showToast(`${entries.length} calendar item${entries.length === 1 ? "" : "s"} exported`);
+  }
+
+  function downloadText(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   function importBackup(event) {
@@ -919,7 +1151,61 @@
   }
 
   function entriesForSlot(dateKey, hour) {
-    return entriesForDate(dateKey).filter((entry) => entry.start === hour).sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+    return entriesForDate(dateKey).filter((entry) => entryOverlapsHour(entry, hour)).sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+  }
+
+  function entriesForPrintSlot(kidId, dateKey, hour) {
+    return state.entries
+      .filter((entry) => entry.kidId === kidId && entry.date === dateKey && entryOverlapsHour(entry, hour))
+      .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+  }
+
+  function entryOverlapsHour(entry, hour) {
+    return entry.start <= hour && entry.end > hour;
+  }
+
+  function entryHasConflict(entry) {
+    return state.entries.some((other) => entriesConflict(entry, other));
+  }
+
+  function conflictPairs(scope = kidsInScope(), dates = null) {
+    const scopedEntries = state.entries.filter((entry) => scope.includes(entry.kidId) && (!dates || dates.includes(entry.date)));
+    const pairs = [];
+    for (let index = 0; index < scopedEntries.length; index += 1) {
+      for (let compare = index + 1; compare < scopedEntries.length; compare += 1) {
+        if (entriesConflict(scopedEntries[index], scopedEntries[compare])) pairs.push([scopedEntries[index], scopedEntries[compare]]);
+      }
+    }
+    return pairs;
+  }
+
+  function entriesConflict(first, second) {
+    return first.id !== second.id && sameScheduleTarget(first, second) && rangesOverlap(first, second);
+  }
+
+  function sameScheduleTarget(first, second) {
+    return first.kidId === second.kidId && first.date === second.date;
+  }
+
+  function rangesOverlap(first, second) {
+    return first.start < second.end && second.start < first.end;
+  }
+
+  function hourBlockDetails(entry, hour) {
+    if (entry.end - entry.start <= 1) {
+      return `${formatHour(entry.start)}-${formatHour(entry.end)}${entry.location ? " | " + entry.location : ""}`;
+    }
+    const segmentEnd = Math.min(entry.end, hour + 1);
+    return `${formatHour(hour)}-${formatHour(segmentEnd)} blocked | Ends ${formatHour(entry.end)}${entry.location ? " | " + entry.location : ""}`;
+  }
+
+  function datesInRange(startDate, endDate) {
+    const dates = [];
+    for (let cursor = toDate(startDate); cursor <= toDate(endDate); cursor = addDays(cursor, 1)) {
+      const dateKey = fmtDate(cursor);
+      if (isEntryDate(dateKey)) dates.push(dateKey);
+    }
+    return dates;
   }
 
   function entriesForDate(dateKey) {
@@ -976,6 +1262,24 @@
     const suffix = hour >= 12 ? "PM" : "AM";
     const normalized = hour % 12 || 12;
     return `${normalized}:00 ${suffix}`;
+  }
+
+  function icsDateTime(dateKey, hour) {
+    const adjustedDate = hour === 24 ? fmtDate(addDays(dateKey, 1)) : dateKey;
+    const adjustedHour = hour === 24 ? 0 : hour;
+    return `${adjustedDate.replace(/-/g, "")}T${String(adjustedHour).padStart(2, "0")}0000`;
+  }
+
+  function utcStamp(date) {
+    return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, "0")}${String(date.getUTCDate()).padStart(2, "0")}T${String(date.getUTCHours()).padStart(2, "0")}${String(date.getUTCMinutes()).padStart(2, "0")}${String(date.getUTCSeconds()).padStart(2, "0")}Z`;
+  }
+
+  function escapeIcsText(value) {
+    return String(value || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\n/g, "\\n")
+      .replace(/,/g, "\\,")
+      .replace(/;/g, "\\;");
   }
 
   function escapeHtml(value) {

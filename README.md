@@ -11,6 +11,12 @@ The app runs entirely on the computer. There is no account, no cloud service, no
 - Activity categories for classes, summer camps, activities, training, learning, family, and rewards.
 - Copy one day to the next week or to a chosen date.
 - Copy one full week to the next week.
+- Copy one scheduled activity as a new activity.
+- Bulk schedule builder for school, camp, training, and recurring learning blocks across date ranges and selected weekdays.
+- Add one long activity block, such as School from 8:00 AM to 4:00 PM, and see it across every covered hour.
+- Weekly parent brief with item count, conflicts, long blocks, finalized days, and next activity.
+- Conflict highlighting for overlapping activities for the same kid.
+- Offline `.ics` export for importing the local schedule into Apple Calendar, Google Calendar, Outlook, or another calendar app.
 - Replace or append when copying.
 - Sunday reward area for weekly completion.
 - Print day, week, or month sheets and save them as PDF from the browser print dialog.
@@ -94,8 +100,40 @@ For monthly sheets, choose landscape paper orientation if you want larger writin
 - Use Copy Day Next Week to repeat one day in the following week.
 - Use Copy Day To Date to copy the selected day to any May-December 2026 date.
 - Use Copy Week Next Week to repeat the visible week.
+- Open any scheduled activity and use Copy Activity to duplicate only that one item. Change the date, kid, start, or end before clicking Copy Activity if needed.
 - Turn Replace target first on when the new copied schedule should overwrite the target day or week.
 - Turn it off when copied activities should be added alongside existing activities.
+
+## Bulk Schedule Builder
+
+Use Bulk Add Schedule for repeated blocks such as school, summer camp, tutoring, therapy, sports training, or a daily reading window.
+
+Example:
+
+1. Click Bulk Add Schedule.
+2. Set From `2026-05-04` and To `2026-05-29`.
+3. Choose Monday-Friday.
+4. Set Start `8:00 AM` and End `4:00 PM`.
+5. Title it `School`.
+6. Keep Replace overlapping activities on if the block should overwrite existing items in that time range.
+
+This creates one clean long block per selected day and renders it across every covered one-hour cell.
+
+## Long Time Blocks
+
+For school, camp, or another multi-hour block, create one activity and set the start and end times. For example, use Start `8:00 AM` and End `4:00 PM`. The week view and printed day/week PDFs will fill each covered one-hour cell, so 8 AM, 9 AM, 10 AM, and the rest of the block all show the activity as blocked until the end time.
+
+## Parent Brief And Conflicts
+
+The Parent Tools panel shows a weekly brief for the selected kid or both kids. It includes total week items, long blocks, finalized days, the next activity, and conflict count.
+
+Conflicts are shown when two activities overlap for the same kid on the same date. Conflicted cells and activity chips are highlighted so parents can resolve double-bookings before printing.
+
+## Calendar Export
+
+Use Export Calendar to download an `.ics` file for the selected kid or both kids. This is a local file export only. The app does not connect to Apple, Google, Outlook, or any cloud calendar directly.
+
+Import the `.ics` file into your calendar app if you want a copy outside Kids Schedule Studio.
 
 ## Backups
 

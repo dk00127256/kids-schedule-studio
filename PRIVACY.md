@@ -27,11 +27,15 @@ kids-schedule-studio-v1
 
 Exported backups are JSON files created only when the user clicks the export button.
 
+Exported calendar files are `.ics` files created only when the user clicks Export Calendar.
+
 ## What Leaves The Computer
 
 Nothing leaves the computer through this app. The app has no cloud service, analytics, telemetry, advertising code, or external API calls.
 
 If a user manually emails, uploads, or shares an exported backup or printed PDF, that sharing happens outside the app.
+
+The same applies to exported `.ics` calendar files.
 
 ## Removing Data
 

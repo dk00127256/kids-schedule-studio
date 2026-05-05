@@ -29,6 +29,7 @@ The app does not use:
 - Imported IDs are restricted to simple safe characters.
 - User-entered text is escaped before being inserted into HTML.
 - Local server scripts bind to `127.0.0.1`.
+- Calendar export is a downloaded `.ics` file generated locally in the browser.
 
 The policy allows inline styles because the app renders user-selected activity colors. Color values are sanitized before rendering.
 
@@ -36,6 +37,7 @@ The policy allows inline styles because the app renders user-selected activity c
 
 - Browser `localStorage` is not encrypted. Anyone with access to the same browser profile may be able to inspect stored schedules.
 - Exported JSON backups are plain text and may contain family schedule details.
+- Exported `.ics` files are plain text calendar files and may contain family schedule details.
 - The generated macOS app bundle is unsigned unless you sign it yourself.
 - This app is not a multi-user system and does not provide authentication.
 

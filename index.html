@@ -29,6 +29,7 @@
           <button class="icon-button" id="exportBtn" title="Export backup" aria-label="Export backup">
             <span aria-hidden="true">[^]</span>
           </button>
+          <button id="exportIcsBtn">Export Calendar</button>
           <button class="primary-button" id="printWeekBtn">Print Week PDF</button>
         </div>
       </header>
@@ -110,6 +111,14 @@
             </div>
             <div id="activityList" class="activity-list"></div>
           </section>
+
+          <section class="panel-section smart-planner">
+            <div class="section-title">
+              <span>Parent Tools</span>
+            </div>
+            <button id="bulkScheduleBtn" class="wide-button primary-button">Bulk Add Schedule</button>
+            <div id="scheduleInsights" class="insight-list"></div>
+          </section>
         </aside>
 
         <section class="main-stage">
@@ -182,6 +191,7 @@
         </div>
         <div class="dialog-actions">
           <button type="button" id="deleteEntryBtn" class="danger-button">Delete</button>
+          <button type="button" id="copyEntryBtn">Copy Activity</button>
           <div class="action-spacer"></div>
           <button value="cancel">Cancel</button>
           <button id="saveEntryBtn" value="default" class="primary-button">Save Activity</button>
@@ -218,6 +228,79 @@
           <div class="action-spacer"></div>
           <button value="cancel">Cancel</button>
           <button id="saveActivityBtn" value="default" class="primary-button">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="bulkDialog" class="app-dialog">
+      <form method="dialog" id="bulkForm">
+        <div class="dialog-head">
+          <h3>Bulk Schedule Builder</h3>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label>
+            <span>Kid</span>
+            <select id="bulkKid"></select>
+          </label>
+          <label>
+            <span>Use saved activity</span>
+            <select id="bulkTemplate"></select>
+          </label>
+          <label>
+            <span>From</span>
+            <input id="bulkStartDate" type="date" min="2026-05-01" max="2026-12-31" required />
+          </label>
+          <label>
+            <span>To</span>
+            <input id="bulkEndDate" type="date" min="2026-05-01" max="2026-12-31" required />
+          </label>
+          <div class="span-2 weekday-picker" aria-label="Weekdays">
+            <label><input type="checkbox" name="bulkWeekday" value="1" checked /> Mon</label>
+            <label><input type="checkbox" name="bulkWeekday" value="2" checked /> Tue</label>
+            <label><input type="checkbox" name="bulkWeekday" value="3" checked /> Wed</label>
+            <label><input type="checkbox" name="bulkWeekday" value="4" checked /> Thu</label>
+            <label><input type="checkbox" name="bulkWeekday" value="5" checked /> Fri</label>
+            <label><input type="checkbox" name="bulkWeekday" value="6" /> Sat</label>
+            <label><input type="checkbox" name="bulkWeekday" value="0" /> Sun</label>
+          </div>
+          <label>
+            <span>Start</span>
+            <select id="bulkStart"></select>
+          </label>
+          <label>
+            <span>End</span>
+            <select id="bulkEnd"></select>
+          </label>
+          <label class="span-2">
+            <span>Title</span>
+            <input id="bulkTitle" type="text" placeholder="School, camp, tutoring..." required maxlength="80" />
+          </label>
+          <label>
+            <span>Type</span>
+            <select id="bulkType"></select>
+          </label>
+          <label>
+            <span>Color</span>
+            <input id="bulkColor" type="color" />
+          </label>
+          <label class="span-2">
+            <span>Location</span>
+            <input id="bulkLocation" type="text" placeholder="School, camp location..." maxlength="120" />
+          </label>
+          <label class="span-2">
+            <span>Details</span>
+            <textarea id="bulkNotes" rows="4" maxlength="800"></textarea>
+          </label>
+          <label class="check-row span-2">
+            <input id="bulkReplaceToggle" type="checkbox" checked />
+            <span>Replace overlapping activities for selected kid and time</span>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <div class="action-spacer"></div>
+          <button value="cancel">Cancel</button>
+          <button id="saveBulkBtn" value="default" class="primary-button">Add Bulk Schedule</button>
         </div>
       </form>
     </dialog>
