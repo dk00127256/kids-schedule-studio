@@ -54,6 +54,7 @@
       { id: "kid2", name: "Kid 2", color: "#0a9396", icon: "rocket" },
     ],
     selectedView: "week",
+    theme: "light",
     selectedKid: "kid1",
     selectedMonth: 5,
     selectedWeekStart: "2026-05-04",
@@ -126,6 +127,8 @@
       "deleteActivityBtn",
       "importFileInput",
       "scheduleInsights",
+      "bulkScheduleTopBtn",
+      "themeToggleBtn",
       "bulkDialog",
       "bulkForm",
       "bulkKid",
@@ -205,7 +208,8 @@
     document.getElementById("exportIcsBtn").addEventListener("click", openCalendarExportDialog);
     document.getElementById("importBtn").addEventListener("click", () => els.importFileInput.click());
     els.importFileInput.addEventListener("change", importBackup);
-    document.getElementById("bulkScheduleBtn").addEventListener("click", openBulkDialog);
+    els.bulkScheduleTopBtn.addEventListener("click", openBulkDialog);
+    els.themeToggleBtn.addEventListener("click", toggleTheme);
 
     els.weekView.addEventListener("click", handleWeekClick);
     els.monthView.addEventListener("click", handleMonthClick);
@@ -257,6 +261,7 @@
   }
 
   function hydrateControls() {
+    applyTheme();
     els.familyNameInput.value = state.familyName || "";
     els.kid1NameInput.value = kidById("kid1").name === "Kid 1" ? "" : kidById("kid1").name;
     els.kid2NameInput.value = kidById("kid2").name === "Kid 2" ? "" : kidById("kid2").name;
@@ -266,6 +271,7 @@
   }
 
   function render() {
+    applyTheme();
     syncSelectors();
     renderActivityList();
     renderInsights();
@@ -1052,6 +1058,21 @@
     els.saveStatus.textContent = `Saved now ${currentTimeLabel()}`;
   }
 
+  function toggleTheme() {
+    state.theme = state.theme === "dark" ? "light" : "dark";
+    applyTheme();
+    saveState(`${state.theme === "dark" ? "Dark" : "Light"} mode saved`);
+  }
+
+  function applyTheme() {
+    const theme = state.theme === "dark" ? "dark" : "light";
+    document.documentElement.dataset.theme = theme;
+    if (els.themeToggleBtn) {
+      els.themeToggleBtn.textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+      els.themeToggleBtn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+    }
+  }
+
   function currentTimeLabel() {
     return new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   }
@@ -1077,6 +1098,7 @@
       familyName: sanitizeText(safeInput.familyName, 80),
       kids: normalizeKids(safeInput.kids, base.kids),
       selectedView: ["week", "month", "activities"].includes(safeInput.selectedView) ? safeInput.selectedView : base.selectedView,
+      theme: ["light", "dark"].includes(safeInput.theme) ? safeInput.theme : base.theme,
       selectedKid: ["kid1", "kid2", "both"].includes(safeInput.selectedKid) ? safeInput.selectedKid : base.selectedKid,
       selectedMonth: MONTHS.includes(selectedMonth) ? selectedMonth : base.selectedMonth,
       selectedWeekStart,

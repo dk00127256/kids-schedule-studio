@@ -65,6 +65,10 @@ assert(app.includes("function renderInsights"), "app.js should render the parent
 assert(app.includes("function exportIcs"), "app.js should support local calendar export");
 assert(app.includes("function openCalendarExportDialog"), "app.js should show calendar export options");
 assert(app.includes("function manualSave"), "app.js should support manual save confirmation");
+assert(app.includes("function toggleTheme"), "app.js should support theme switching");
+assert(app.includes("function applyTheme"), "app.js should apply saved theme");
+assert(styles.includes(":root[data-theme=\"dark\"]"), "styles.css should include a dark theme");
+assert(index.includes("bulkScheduleTopBtn"), "index.html should keep bulk scheduling as a top action");
 assert(app.includes("Apple Calendar on MacBook"), "app.js should include Apple Calendar instructions");
 assert(app.includes("Outlook Calendar"), "app.js should include Outlook Calendar instructions");
 assert(app.includes("Google Calendar"), "app.js should include Google Calendar instructions");

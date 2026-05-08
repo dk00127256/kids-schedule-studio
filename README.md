@@ -33,6 +33,7 @@ Both folders run the same local, private app. Schedule data auto-saves locally i
 - Export and import JSON backups.
 - Local browser storage for day-to-day use.
 - Auto-save after edits plus a visible Save Now button for manual confirmation.
+- Light mode and dark mode with the selected theme saved locally.
 - No third-party JavaScript, no npm dependencies, and no remote assets.
 
 ## Requirements
