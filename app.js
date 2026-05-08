@@ -20,8 +20,16 @@
   ];
   const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const START_HOURS = Array.from({ length: 16 }, (_, i) => i + 8);
-  const END_HOURS = Array.from({ length: 16 }, (_, i) => i + 9);
+  const DAY_START_MINUTES = 5 * 60;
+  const DAY_END_MINUTES = 24 * 60;
+  const TIME_STEP_MINUTES = 15;
+  const GRID_HOURS = Array.from({ length: 19 }, (_, i) => i + 5);
+  const TIME_OPTIONS = Array.from(
+    { length: (DAY_END_MINUTES - DAY_START_MINUTES) / TIME_STEP_MINUTES + 1 },
+    (_, i) => DAY_START_MINUTES + i * TIME_STEP_MINUTES,
+  );
+  const START_TIME_OPTIONS = TIME_OPTIONS.slice(0, -1);
+  const END_TIME_OPTIONS = TIME_OPTIONS.slice(1);
   const MIN_ENTRY_DATE = "2026-05-01";
   const MAX_ENTRY_DATE = "2026-12-31";
   const MIN_DISPLAY_DATE = "2026-04-27";
@@ -132,8 +140,13 @@
       "bulkLocation",
       "bulkNotes",
       "bulkReplaceToggle",
+      "calendarDialog",
+      "calendarForm",
+      "calendarPlatform",
+      "calendarInstructions",
       "toast",
       "printRoot",
+      "manualSaveBtn",
       "saveStatus",
     ].forEach((key) => {
       els[key] = document.getElementById(key);
@@ -153,6 +166,7 @@
       state.familyName = els.familyNameInput.value.trim();
       saveState("Saved family");
     });
+    els.manualSaveBtn.addEventListener("click", manualSave);
     els.kid1NameInput.addEventListener("input", () => updateKidName("kid1", els.kid1NameInput.value));
     els.kid2NameInput.addEventListener("input", () => updateKidName("kid2", els.kid2NameInput.value));
     els.monthSelect.addEventListener("change", () => {
@@ -188,7 +202,7 @@
     document.getElementById("printDayBtn").addEventListener("click", () => printSchedule("day"));
     document.getElementById("printMonthBtn").addEventListener("click", () => printSchedule("month"));
     document.getElementById("exportBtn").addEventListener("click", exportBackup);
-    document.getElementById("exportIcsBtn").addEventListener("click", exportIcs);
+    document.getElementById("exportIcsBtn").addEventListener("click", openCalendarExportDialog);
     document.getElementById("importBtn").addEventListener("click", () => els.importFileInput.click());
     els.importFileInput.addEventListener("change", importBackup);
     document.getElementById("bulkScheduleBtn").addEventListener("click", openBulkDialog);
@@ -208,6 +222,7 @@
       const type = TYPES.find((item) => item.name === els.bulkType.value);
       if (type) els.bulkColor.value = type.color;
     });
+    els.calendarPlatform.addEventListener("change", renderCalendarExportInstructions);
     document.getElementById("saveEntryBtn").addEventListener("click", (event) => {
       event.preventDefault();
       saveEntryFromForm();
@@ -223,15 +238,19 @@
       event.preventDefault();
       saveBulkSchedule();
     });
+    document.getElementById("downloadCalendarBtn").addEventListener("click", (event) => {
+      event.preventDefault();
+      exportIcs();
+    });
     els.deleteActivityBtn.addEventListener("click", deleteEditingActivity);
   }
 
   function populateStaticSelects() {
     els.monthSelect.innerHTML = MONTHS.map((month) => `<option value="${month}">${MONTH_NAMES[month]} 2026</option>`).join("");
-    els.entryStart.innerHTML = START_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
-    els.entryEnd.innerHTML = END_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
-    els.bulkStart.innerHTML = START_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
-    els.bulkEnd.innerHTML = END_HOURS.map((hour) => `<option value="${hour}">${formatHour(hour)}</option>`).join("");
+    els.entryStart.innerHTML = START_TIME_OPTIONS.map((minutes) => `<option value="${minutes}">${formatTime(minutes)}</option>`).join("");
+    els.entryEnd.innerHTML = END_TIME_OPTIONS.map((minutes) => `<option value="${minutes}">${formatTime(minutes)}</option>`).join("");
+    els.bulkStart.innerHTML = START_TIME_OPTIONS.map((minutes) => `<option value="${minutes}">${formatTime(minutes)}</option>`).join("");
+    els.bulkEnd.innerHTML = END_TIME_OPTIONS.map((minutes) => `<option value="${minutes}">${formatTime(minutes)}</option>`).join("");
     [els.entryType, els.activityType, els.bulkType].forEach((select) => {
       select.innerHTML = TYPES.map((type) => `<option value="${escapeHtml(type.name)}">${escapeHtml(type.name)}</option>`).join("");
     });
@@ -243,6 +262,7 @@
     els.kid2NameInput.value = kidById("kid2").name === "Kid 2" ? "" : kidById("kid2").name;
     els.replaceCopyToggle.checked = true;
     els.targetDateInput.value = fmtDate(addDays(state.selectedWeekStart, 7));
+    renderCalendarExportInstructions();
   }
 
   function render() {
@@ -317,19 +337,20 @@
       )
       .join("");
 
-    const rows = START_HOURS.map((hour) => {
-      const timeCell = `<div class="week-cell time-cell">${formatHour(hour)}</div>`;
+    const rows = GRID_HOURS.map((hour) => {
+      const slotStart = hour * 60;
+      const timeCell = `<div class="week-cell time-cell">${formatTime(slotStart)}</div>`;
       const dayCells = week
         .map((day, dayIndex) => {
           const dateKey = fmtDate(day);
           const finalized = isFinalized(dateKey) ? " finalized" : "";
           const reward = dayIndex === 6 ? " reward" : "";
-          const entries = entriesForSlot(dateKey, hour);
+          const entries = entriesForSlot(dateKey, slotStart);
           const conflict = entries.some((entry) => entryHasConflict(entry)) ? " conflict" : "";
           const chips = entries.length
-            ? entries.map((entry) => entryChip(entry, hour)).join("")
+            ? entries.map((entry) => entryChip(entry, slotStart)).join("")
             : `<span class="empty-hint">${dayIndex === 6 ? "Reward" : ""}</span>`;
-          return `<div class="week-cell slot-cell${finalized}${reward}${conflict}" data-date="${dateKey}" data-hour="${hour}">${chips}</div>`;
+          return `<div class="week-cell slot-cell${finalized}${reward}${conflict}" data-date="${dateKey}" data-time="${slotStart}">${chips}</div>`;
         })
         .join("");
       return timeCell + dayCells;
@@ -362,7 +383,7 @@
         const reward = day.getDay() === 0 ? " reward" : "";
         const finalized = isFinalized(dateKey) ? " finalized" : "";
         const entries = entriesForDate(dateKey).slice(0, 5);
-        const chips = entries.map((entry) => `<div class="mini-chip" style="background:${entry.color}">${formatHour(entry.start)} ${escapeHtml(entry.title)}</div>`).join("");
+        const chips = entries.map((entry) => `<div class="mini-chip" style="background:${entry.color}">${formatTime(entry.start)} ${escapeHtml(entry.title)}</div>`).join("");
         return `<div class="day-card${outside}${reward}${finalized}" data-date="${dateKey}">
           <div class="date-number">${day.getDate()} ${SHORT_DAYS[(day.getDay() + 6) % 7]}</div>
           <div class="day-summary">${chips || `<span class="empty-hint">Open</span>`}</div>
@@ -392,7 +413,7 @@
     const longBlockCount = weekEntries.filter((entry) => entry.end - entry.start > 1).length;
     const finalizedCount = weekDates.filter((dateKey) => scope.every((kidId) => state.finalized[`${kidId}:${dateKey}`])).length;
     const nextEntry = weekEntries.slice().sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)[0];
-    const nextText = nextEntry ? `${SHORT_DAYS[(toDate(nextEntry.date).getDay() + 6) % 7]} ${formatHour(nextEntry.start)} ${nextEntry.title}` : "No activities this week";
+    const nextText = nextEntry ? `${SHORT_DAYS[(toDate(nextEntry.date).getDay() + 6) % 7]} ${formatTime(nextEntry.start)} ${nextEntry.title}` : "No activities this week";
     els.scheduleInsights.innerHTML = [
       insightItem("Week items", String(weekEntries.length)),
       insightItem("Conflicts", String(conflictCount), conflictCount ? "danger" : "good"),
@@ -426,11 +447,11 @@
     </div>`;
   }
 
-  function entryChip(entry, hour = entry.start) {
+  function entryChip(entry, slotStart = entry.start) {
     const kid = kidById(entry.kidId);
     const kidPrefix = state.selectedKid === "both" ? `${kid.name}: ` : "";
-    const isContinuation = hour > entry.start;
-    const details = hourBlockDetails(entry, hour);
+    const isContinuation = slotStart > entry.start;
+    const details = hourBlockDetails(entry, slotStart);
     const conflict = entryHasConflict(entry) ? " conflict" : "";
     return `<button class="entry-chip${isContinuation ? " continued" : ""}${conflict}" style="background:${entry.color}" data-entry-id="${entry.id}">
       ${escapeHtml(kidPrefix + entry.title)}
@@ -449,7 +470,8 @@
     if (!slot) return;
     state.selectedDate = slot.dataset.date;
     const kidId = state.selectedKid === "both" ? state.kids[0].id : state.selectedKid;
-    openEntryDialog({ kidId, date: slot.dataset.date, start: Number(slot.dataset.hour), end: Number(slot.dataset.hour) + 1 });
+    const start = Number(slot.dataset.time);
+    openEntryDialog({ kidId, date: slot.dataset.date, start, end: Math.min(DAY_END_MINUTES, start + 60) });
   }
 
   function handleMonthClick(event) {
@@ -481,8 +503,10 @@
     els.copyEntryBtn.style.display = editingEntryId ? "inline-flex" : "none";
     els.entryKid.value = entry.kidId || (state.selectedKid === "both" ? state.kids[0].id : state.selectedKid);
     els.entryDate.value = entry.date || state.selectedDate || state.selectedWeekStart;
-    els.entryStart.value = String(entry.start || 8);
-    els.entryEnd.value = String(entry.end || Number(els.entryStart.value) + 1);
+    const start = sanitizeTime(entry.start, 8 * 60, false);
+    const end = sanitizeTime(entry.end, Math.min(DAY_END_MINUTES, start + 60), true);
+    els.entryStart.value = String(start);
+    els.entryEnd.value = String(end > start ? end : Math.min(DAY_END_MINUTES, start + 60));
     els.entryTemplate.value = "";
     els.entryTitle.value = entry.title || "";
     els.entryType.value = entry.type || "Classes";
@@ -509,8 +533,8 @@
     els.bulkTemplate.value = "";
     els.bulkStartDate.value = startDate;
     els.bulkEndDate.value = isEntryDate(defaultEnd) ? defaultEnd : startDate;
-    els.bulkStart.value = "8";
-    els.bulkEnd.value = "16";
+    els.bulkStart.value = String(8 * 60);
+    els.bulkEnd.value = String(16 * 60);
     els.bulkTitle.value = "School";
     els.bulkType.value = "Learning";
     els.bulkColor.value = colorForType("Learning");
@@ -543,9 +567,9 @@
       showToast("Choose at least one weekday");
       return;
     }
-    const start = sanitizeHour(els.bulkStart.value, 8, 23);
-    let end = sanitizeHour(els.bulkEnd.value, Math.min(24, start + 1));
-    if (end <= start) end = Math.min(24, start + 1);
+    const start = sanitizeTime(els.bulkStart.value, 8 * 60, false);
+    let end = sanitizeTime(els.bulkEnd.value, Math.min(DAY_END_MINUTES, start + 60), true);
+    if (end <= start) end = Math.min(DAY_END_MINUTES, start + TIME_STEP_MINUTES);
     const type = sanitizeType(els.bulkType.value);
     const kidIds = els.bulkKid.value === "both" ? state.kids.map((kid) => kid.id) : [sanitizeKidId(els.bulkKid.value)];
     const title = sanitizeText(els.bulkTitle.value, 80) || "Activity";
@@ -604,7 +628,7 @@
       state.entries.push(entry);
     }
     selectEntryDate(entry.date);
-    saveState(entry.end - entry.start > 1 ? "Bulk time block saved" : "Activity saved");
+    saveState(entry.end - entry.start > 60 ? "Bulk time block saved" : "Activity saved");
     els.entryDialog.close();
     render();
   }
@@ -621,9 +645,9 @@
   }
 
   function entryFromForm(entryId) {
-    const start = sanitizeHour(els.entryStart.value, 8, 23);
-    let end = sanitizeHour(els.entryEnd.value, Math.min(24, start + 1));
-    if (end <= start) end = Math.min(24, start + 1);
+    const start = sanitizeTime(els.entryStart.value, 8 * 60, false);
+    let end = sanitizeTime(els.entryEnd.value, Math.min(DAY_END_MINUTES, start + 60), true);
+    if (end <= start) end = Math.min(DAY_END_MINUTES, start + TIME_STEP_MINUTES);
     const type = sanitizeType(els.entryType.value);
     const date = sanitizeDate(els.entryDate.value, state.selectedDate, true);
     if (!date) {
@@ -806,16 +830,17 @@
   function printWeekPage(kid) {
     const week = currentWeek();
     const title = `${kid.name} | Week of ${week[0].toLocaleString("en-US", { month: "short", day: "numeric" })} - ${week[6].toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
-    const subtitle = `${state.familyName || "Family"} | 8:00 AM-11:00 PM Central Time`;
+    const subtitle = `${state.familyName || "Family"} | ${formatTime(DAY_START_MINUTES)}-${formatTime(DAY_END_MINUTES)} Central Time`;
     const header = `<tr><th class="time-col">Time</th>${week.map((day, index) => `<th>${SHORT_DAYS[index]} ${day.getMonth() + 1}/${day.getDate()}${index === 6 ? " Reward" : ""}</th>`).join("")}</tr>`;
-    const body = START_HOURS.map((hour) => {
+    const body = GRID_HOURS.map((hour) => {
+      const slotStart = hour * 60;
       const cells = week
         .map((day) => {
-          const entries = entriesForPrintSlot(kid.id, fmtDate(day), hour);
-          return `<td>${entries.map((entry) => printEntry(entry, hour)).join("")}</td>`;
+          const entries = entriesForPrintSlot(kid.id, fmtDate(day), slotStart);
+          return `<td>${entries.map((entry) => printEntry(entry, slotStart)).join("")}</td>`;
         })
         .join("");
-      return `<tr><td class="time-col">${formatHour(hour)}</td>${cells}</tr>`;
+      return `<tr><td class="time-col">${formatTime(slotStart)}</td>${cells}</tr>`;
     }).join("");
     return `<section class="print-page">${printHeader(title, subtitle, kid)}<table class="print-table">${header}${body}</table></section>`;
   }
@@ -824,9 +849,10 @@
     const day = toDate(state.selectedDate || state.selectedWeekStart);
     const title = `${kid.name} | ${day.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`;
     const subtitle = `${state.familyName || "Family"} | Daily plan`;
-    const body = START_HOURS.map((hour) => {
-      const entries = entriesForPrintSlot(kid.id, fmtDate(day), hour);
-      return `<tr><td class="time-col">${formatHour(hour)}</td><td>${entries.map((entry) => printEntry(entry, hour)).join("")}</td></tr>`;
+    const body = GRID_HOURS.map((hour) => {
+      const slotStart = hour * 60;
+      const entries = entriesForPrintSlot(kid.id, fmtDate(day), slotStart);
+      return `<tr><td class="time-col">${formatTime(slotStart)}</td><td>${entries.map((entry) => printEntry(entry, slotStart)).join("")}</td></tr>`;
     }).join("");
     return `<section class="print-page">${printHeader(title, subtitle, kid)}<table class="print-table"><tr><th class="time-col">Time</th><th>Activity</th></tr>${body}</table></section>`;
   }
@@ -842,7 +868,7 @@
           .map((day) => {
             const dateKey = fmtDate(day);
             const entries = state.entries.filter((entry) => entry.kidId === kid.id && entry.date === dateKey);
-            return `<td><strong>${day.getDate()}</strong><br />${entries.map((entry) => `${formatHour(entry.start)} ${escapeHtml(entry.title)}`).join("<br />")}</td>`;
+            return `<td><strong>${day.getDate()}</strong><br />${entries.map((entry) => `${formatTime(entry.start)} ${escapeHtml(entry.title)}`).join("<br />")}</td>`;
           })
           .join("");
         return `<tr>${cells}</tr>`;
@@ -851,9 +877,9 @@
     return `<section class="print-page">${printHeader(title, subtitle, kid)}<table class="print-table print-month">${header}${rows}</table></section>`;
   }
 
-  function printEntry(entry, hour = entry.start) {
-    const details = hourBlockDetails(entry, hour);
-    return `<div class="print-entry${hour > entry.start ? " continued" : ""}" style="background:${entry.color}">${escapeHtml(entry.title)}<br /><small>${escapeHtml(details)}</small></div>`;
+  function printEntry(entry, slotStart = entry.start) {
+    const details = hourBlockDetails(entry, slotStart);
+    return `<div class="print-entry${slotStart > entry.start ? " continued" : ""}" style="background:${entry.color}">${escapeHtml(entry.title)}<br /><small>${escapeHtml(details)}</small></div>`;
   }
 
   function exportBackup() {
@@ -868,7 +894,26 @@
     showToast("Backup exported");
   }
 
+  function openCalendarExportDialog() {
+    renderCalendarExportInstructions();
+    els.calendarDialog.showModal();
+  }
+
+  function renderCalendarExportInstructions() {
+    if (!els.calendarInstructions) return;
+    const platform = calendarPlatform();
+    const option = calendarExportOptions()[platform];
+    els.calendarInstructions.innerHTML = `<div class="instruction-card">
+      <strong>${escapeHtml(option.title)}</strong>
+      <p>${escapeHtml(option.summary)}</p>
+      <ol>${option.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+      <small>${escapeHtml(option.note)}</small>
+    </div>`;
+  }
+
   function exportIcs() {
+    const platform = calendarPlatform();
+    const option = calendarExportOptions()[platform];
     const scope = kidsInScope();
     const entries = state.entries.filter((entry) => scope.includes(entry.kidId)).sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
     if (!entries.length) {
@@ -901,8 +946,57 @@
       lines.push("END:VEVENT");
     });
     lines.push("END:VCALENDAR");
-    downloadText(lines.join("\r\n"), `kids-schedule-studio-${state.selectedKid}-${new Date().toISOString().slice(0, 10)}.ics`, "text/calendar");
-    showToast(`${entries.length} calendar item${entries.length === 1 ? "" : "s"} exported`);
+    downloadText(lines.join("\r\n"), `kids-schedule-studio-${option.slug}-${state.selectedKid}-${new Date().toISOString().slice(0, 10)}.ics`, "text/calendar");
+    showToast(`${option.shortName} file exported`);
+    els.calendarDialog.close();
+  }
+
+  function calendarPlatform() {
+    return ["apple", "outlook", "google"].includes(els.calendarPlatform.value) ? els.calendarPlatform.value : "apple";
+  }
+
+  function calendarExportOptions() {
+    return {
+      apple: {
+        slug: "apple-calendar",
+        shortName: "Apple Calendar",
+        title: "Apple Calendar on MacBook",
+        summary: "Best for the built-in Calendar app on your MacBook, iPhone, or iPad through iCloud.",
+        steps: [
+          "Download the .ics file.",
+          "Double-click the downloaded file on your MacBook.",
+          "Choose the calendar where you want to import these activities.",
+          "Confirm Import in Apple Calendar.",
+        ],
+        note: "If iCloud Calendar is enabled, Apple can sync the imported events to your Apple devices.",
+      },
+      outlook: {
+        slug: "outlook-calendar",
+        shortName: "Outlook",
+        title: "Outlook Calendar",
+        summary: "Best for Microsoft Outlook on Mac, Windows, or Outlook on the web.",
+        steps: [
+          "Download the .ics file.",
+          "In Outlook, open Calendar.",
+          "Choose Add calendar or Import calendar.",
+          "Select Upload from file, choose this .ics file, then import it to the calendar you want.",
+        ],
+        note: "Exact labels can vary between Outlook desktop and Outlook web, but the file type is the same .ics calendar file.",
+      },
+      google: {
+        slug: "google-calendar",
+        shortName: "Google Calendar",
+        title: "Google Calendar",
+        summary: "Best for importing the schedule into a Google account calendar.",
+        steps: [
+          "Download the .ics file.",
+          "Open Google Calendar in your browser.",
+          "Go to Settings, then Import & export.",
+          "Choose the .ics file and select the Google calendar to import into.",
+        ],
+        note: "Google import is manual for privacy. This app does not connect to your Google account.",
+      },
+    };
   }
 
   function downloadText(content, filename, type) {
@@ -944,13 +1038,22 @@
   function saveState(message = "Saved locally") {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      els.saveStatus.textContent = "Saved locally";
+      els.saveStatus.textContent = `Auto-saved ${currentTimeLabel()}`;
     } catch (error) {
       els.saveStatus.textContent = "Save blocked";
       showToast("Browser blocked local save");
       return;
     }
     if (message) showToast(message);
+  }
+
+  function manualSave() {
+    saveState(`Saved now at ${currentTimeLabel()}`);
+    els.saveStatus.textContent = `Saved now ${currentTimeLabel()}`;
+  }
+
+  function currentTimeLabel() {
+    return new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   }
 
   function loadState() {
@@ -1024,15 +1127,15 @@
     if (!entry || typeof entry !== "object") return null;
     const date = sanitizeDate(entry.date, null, true);
     if (!date) return null;
-    const start = sanitizeHour(entry.start, 8, 23);
-    const end = Math.max(start + 1, sanitizeHour(entry.end, Math.min(24, start + 1)));
+    const start = sanitizeTime(entry.start, 8 * 60, false);
+    const end = Math.max(start + TIME_STEP_MINUTES, sanitizeTime(entry.end, Math.min(DAY_END_MINUTES, start + 60), true));
     const type = sanitizeType(entry.type);
     return {
       id: sanitizeId(entry.id),
       kidId: sanitizeKidId(entry.kidId),
       date,
       start,
-      end: Math.min(24, end),
+      end: Math.min(DAY_END_MINUTES, end),
       title: sanitizeText(entry.title, 80) || "Activity",
       type,
       color: sanitizeColor(entry.color, colorForType(type)),
@@ -1087,9 +1190,22 @@
     return /^#[0-9a-fA-F]{6}$/.test(candidate) ? candidate.toLowerCase() : fallback;
   }
 
-  function sanitizeHour(value, fallback, maxHour = 24) {
-    const hour = Number(value);
-    return Number.isInteger(hour) && hour >= 8 && hour <= maxHour ? hour : fallback;
+  function sanitizeTime(value, fallback, allowEnd) {
+    const raw = Number(value);
+    const fallbackMinutes = normalizeTimeNumber(fallback);
+    const minutes = normalizeTimeNumber(raw);
+    const max = allowEnd ? DAY_END_MINUTES : DAY_END_MINUTES - TIME_STEP_MINUTES;
+    if (Number.isInteger(minutes) && minutes >= DAY_START_MINUTES && minutes <= max && minutes % TIME_STEP_MINUTES === 0) {
+      return minutes;
+    }
+    return fallbackMinutes;
+  }
+
+  function normalizeTimeNumber(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return 8 * 60;
+    if (number >= 0 && number <= 24) return number * 60;
+    return Math.round(number);
   }
 
   function sanitizeDate(value, fallback, entryOnly = false) {
@@ -1150,18 +1266,19 @@
     return weeks;
   }
 
-  function entriesForSlot(dateKey, hour) {
-    return entriesForDate(dateKey).filter((entry) => entryOverlapsHour(entry, hour)).sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
+  function entriesForSlot(dateKey, slotStart) {
+    return entriesForDate(dateKey).filter((entry) => entryOverlapsSlot(entry, slotStart)).sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
   }
 
-  function entriesForPrintSlot(kidId, dateKey, hour) {
+  function entriesForPrintSlot(kidId, dateKey, slotStart) {
     return state.entries
-      .filter((entry) => entry.kidId === kidId && entry.date === dateKey && entryOverlapsHour(entry, hour))
+      .filter((entry) => entry.kidId === kidId && entry.date === dateKey && entryOverlapsSlot(entry, slotStart))
       .sort((a, b) => a.start - b.start || a.title.localeCompare(b.title));
   }
 
-  function entryOverlapsHour(entry, hour) {
-    return entry.start <= hour && entry.end > hour;
+  function entryOverlapsSlot(entry, slotStart) {
+    const slotEnd = slotStart + 60;
+    return entry.start < slotEnd && entry.end > slotStart;
   }
 
   function entryHasConflict(entry) {
@@ -1191,12 +1308,15 @@
     return first.start < second.end && second.start < first.end;
   }
 
-  function hourBlockDetails(entry, hour) {
-    if (entry.end - entry.start <= 1) {
-      return `${formatHour(entry.start)}-${formatHour(entry.end)}${entry.location ? " | " + entry.location : ""}`;
+  function hourBlockDetails(entry, slotStart) {
+    const slotEnd = slotStart + 60;
+    const fitsInsideSlot = entry.start >= slotStart && entry.end <= slotEnd;
+    if (fitsInsideSlot) {
+      return `${formatTime(entry.start)}-${formatTime(entry.end)}${entry.location ? " | " + entry.location : ""}`;
     }
-    const segmentEnd = Math.min(entry.end, hour + 1);
-    return `${formatHour(hour)}-${formatHour(segmentEnd)} blocked | Ends ${formatHour(entry.end)}${entry.location ? " | " + entry.location : ""}`;
+    const segmentStart = Math.max(entry.start, slotStart);
+    const segmentEnd = Math.min(entry.end, slotEnd);
+    return `${formatTime(segmentStart)}-${formatTime(segmentEnd)} blocked | Ends ${formatTime(entry.end)}${entry.location ? " | " + entry.location : ""}`;
   }
 
   function datesInRange(startDate, endDate) {
@@ -1257,17 +1377,21 @@
     return addDays(date, diff);
   }
 
-  function formatHour(hour) {
-    if (hour === 24) return "12:00 AM";
+  function formatTime(minutes) {
+    const normalizedMinutes = Number(minutes) === DAY_END_MINUTES ? 0 : Number(minutes);
+    const hour = Math.floor(normalizedMinutes / 60);
+    const minute = normalizedMinutes % 60;
     const suffix = hour >= 12 ? "PM" : "AM";
-    const normalized = hour % 12 || 12;
-    return `${normalized}:00 ${suffix}`;
+    const normalizedHour = hour % 12 || 12;
+    return `${normalizedHour}:${String(minute).padStart(2, "0")} ${suffix}`;
   }
 
-  function icsDateTime(dateKey, hour) {
-    const adjustedDate = hour === 24 ? fmtDate(addDays(dateKey, 1)) : dateKey;
-    const adjustedHour = hour === 24 ? 0 : hour;
-    return `${adjustedDate.replace(/-/g, "")}T${String(adjustedHour).padStart(2, "0")}0000`;
+  function icsDateTime(dateKey, minutes) {
+    const adjustedDate = minutes >= DAY_END_MINUTES ? fmtDate(addDays(dateKey, Math.floor(minutes / DAY_END_MINUTES))) : dateKey;
+    const adjustedMinutes = minutes % DAY_END_MINUTES;
+    const hour = Math.floor(adjustedMinutes / 60);
+    const minute = adjustedMinutes % 60;
+    return `${adjustedDate.replace(/-/g, "")}T${String(hour).padStart(2, "0")}${String(minute).padStart(2, "0")}00`;
   }
 
   function utcStamp(date) {

@@ -152,13 +152,22 @@ h1 {
 .family-strip {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr auto;
+  grid-template-columns: 1.1fr 1fr 1fr minmax(180px, auto);
   gap: 10px;
   align-items: end;
   padding: 12px;
   background: var(--white);
   border: 1px solid var(--soft-line);
   border-radius: 8px;
+}
+
+.save-cluster {
+  display: grid;
+  gap: 6px;
+}
+
+.save-cluster button {
+  width: 100%;
 }
 
 label {
@@ -697,6 +706,42 @@ h2 {
 .weekday-picker input {
   width: auto;
   min-height: auto;
+}
+
+.calendar-instructions {
+  color: var(--ink);
+}
+
+.instruction-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  background: #fbfcff;
+}
+
+.instruction-card strong {
+  font-size: 15px;
+}
+
+.instruction-card p,
+.instruction-card small {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.instruction-card ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.instruction-card li {
+  margin: 5px 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .span-2 {

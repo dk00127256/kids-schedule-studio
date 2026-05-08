@@ -47,7 +47,10 @@
           <span>Kid 2</span>
           <input id="kid2NameInput" type="text" placeholder="Kid 2 name" autocomplete="off" maxlength="60" />
         </label>
-        <div class="save-pill" id="saveStatus">Saved locally</div>
+        <div class="save-cluster">
+          <button id="manualSaveBtn" class="primary-button">Save Now</button>
+          <div class="save-pill" id="saveStatus">Auto-saved locally</div>
+        </div>
       </section>
 
       <main class="workspace">
@@ -301,6 +304,31 @@
           <div class="action-spacer"></div>
           <button value="cancel">Cancel</button>
           <button id="saveBulkBtn" value="default" class="primary-button">Add Bulk Schedule</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="calendarDialog" class="app-dialog small-dialog">
+      <form method="dialog" id="calendarForm">
+        <div class="dialog-head">
+          <h3>Export Calendar</h3>
+          <button class="icon-button" value="cancel" title="Close" aria-label="Close">x</button>
+        </div>
+        <div class="form-grid">
+          <label class="span-2">
+            <span>Calendar app</span>
+            <select id="calendarPlatform">
+              <option value="apple">Apple Calendar on MacBook</option>
+              <option value="outlook">Outlook Calendar</option>
+              <option value="google">Google Calendar</option>
+            </select>
+          </label>
+          <div id="calendarInstructions" class="calendar-instructions span-2" aria-live="polite"></div>
+        </div>
+        <div class="dialog-actions">
+          <div class="action-spacer"></div>
+          <button value="cancel">Cancel</button>
+          <button id="downloadCalendarBtn" value="default" class="primary-button">Download Calendar File</button>
         </div>
       </form>
     </dialog>

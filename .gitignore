@@ -6,6 +6,8 @@ dist/
 qa-*.png
 kids-schedule-studio-backup-*.json
 assets/AppIcon.iconset/
+__pycache__/
+*.pyc
 .env
 .env.*
 .vscode/

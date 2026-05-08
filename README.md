@@ -1,13 +1,23 @@
 # Kids Schedule Studio
 
-Kids Schedule Studio is a local-first planning app for two elementary-age kids. It covers May 2026 through December 2026, shows every day from Monday to Sunday, gives each day hourly planning space from 8:00 AM to 11:00 PM Central Time, and lets parents copy a day or week into another week so repeated classes, camps, training, learning blocks, and activities do not have to be entered again.
+Kids Schedule Studio is a local-first planning app for two elementary-age kids. It covers May 2026 through December 2026, shows every day from Monday to Sunday, gives each day planning space from 5:00 AM to midnight Central Time, and supports 15-minute start/end times so parents can enter classes, camps, training, learning blocks, and activities without forcing everything into one-hour chunks.
 
 The app runs entirely on the computer. There is no account, no cloud service, no external API, and no network dependency beyond the local web server on `127.0.0.1`.
+
+## Choose Your Computer
+
+For end users, start here:
+
+- [macOS instructions](macOS/README.md): MacBook and iMac users should open the `macOS` folder and double-click `Run Kids Schedule Studio.command`.
+- [Windows instructions](Windows/README.md): Windows users should open the `Windows` folder and double-click `Run Kids Schedule Studio.bat`.
+
+Both folders run the same local, private app. Schedule data auto-saves locally in the browser profile used on that computer.
 
 ## Features
 
 - Two customizable kid names.
 - Weekly, monthly, and reusable activity views.
+- 15-minute start and end times for classes such as 6:30 PM-7:30 PM or 5:15 PM-5:45 PM.
 - Activity categories for classes, summer camps, activities, training, learning, family, and rewards.
 - Copy one day to the next week or to a chosen date.
 - Copy one full week to the next week.
@@ -22,6 +32,7 @@ The app runs entirely on the computer. There is no account, no cloud service, no
 - Print day, week, or month sheets and save them as PDF from the browser print dialog.
 - Export and import JSON backups.
 - Local browser storage for day-to-day use.
+- Auto-save after edits plus a visible Save Now button for manual confirmation.
 - No third-party JavaScript, no npm dependencies, and no remote assets.
 
 ## Requirements
@@ -32,6 +43,8 @@ The app runs entirely on the computer. There is no account, no cloud service, no
 - Node.js is optional, only needed for `npm run check`.
 
 ## Quick Start On macOS
+
+For the easiest Mac setup, use [macOS/README.md](macOS/README.md).
 
 From a terminal:
 
@@ -69,6 +82,8 @@ http://127.0.0.1:4177/index.html
 ```
 
 ## Build A macOS App Bundle
+
+For one-click packaging on a Mac, use [macOS/Build Mac Desktop App.command](macOS/Build%20Mac%20Desktop%20App.command).
 
 To create a local `.app` bundle and zip file:
 
@@ -129,6 +144,8 @@ This creates one clean long block per selected day and renders it across every c
 
 For school, camp, or another multi-hour block, create one activity and set the start and end times. For example, use Start `8:00 AM` and End `4:00 PM`. The week view and printed day/week PDFs will fill each covered one-hour cell, so 8 AM, 9 AM, 10 AM, and the rest of the block all show the activity as blocked until the end time.
 
+For shorter classes, use the 15-minute time options. Examples: `6:30 PM-7:30 PM`, `5:15 PM-5:45 PM`, or `8:45 AM-9:15 AM`.
+
 ## Parent Brief And Conflicts
 
 The Parent Tools panel shows a weekly brief for the selected kid or both kids. It includes total week items, long blocks, finalized days, the next activity, and conflict count.
@@ -137,15 +154,25 @@ Conflicts are shown when two activities overlap for the same kid on the same dat
 
 ## Calendar Export
 
-Use Export Calendar to download an `.ics` file for the selected kid or both kids. This is a local file export only. The app does not connect to Apple, Google, Outlook, or any cloud calendar directly.
+Use Export Calendar to choose Apple Calendar on MacBook, Outlook Calendar, or Google Calendar. Each option downloads a local `.ics` file and shows the matching import steps.
 
-Import the `.ics` file into your calendar app if you want a copy outside Kids Schedule Studio.
+- Apple Calendar on MacBook: download the `.ics` file, double-click it, choose the calendar, and import.
+- Outlook Calendar: download the `.ics` file, open Outlook Calendar, choose Add calendar or Import calendar, then upload from file.
+- Google Calendar: download the `.ics` file, open Google Calendar, go to Settings, then Import & export, and import the file into the calendar you choose.
+
+This is a local file export only. The app does not connect to Apple, Google, Outlook, or any cloud calendar directly.
 
 ## Backups
 
 Use the top-right export button to save a JSON backup. Use import to restore it later or move the schedule to another computer.
 
 Backup files contain family names, kid names, activities, locations, notes, and schedule details. Treat them like private family planning files.
+
+## Saving
+
+The app auto-saves locally after edits. The Save Now button is also available for manual confirmation before closing the app, restarting the Mac, or printing/exporting.
+
+Saved schedules reload when the same browser profile opens the local app again. Export JSON backups regularly for extra safety.
 
 ## Security And Privacy
 
@@ -192,6 +219,14 @@ Add a `LICENSE` file before public release if you want to grant other people reu
 
 ```text
 kids-schedule-studio/
+  macOS/
+    README.md
+    Run Kids Schedule Studio.command
+    Build Mac Desktop App.command
+  Windows/
+    README.md
+    Run Kids Schedule Studio.bat
+    Run Kids Schedule Studio.ps1
   index.html
   styles.css
   app.js
